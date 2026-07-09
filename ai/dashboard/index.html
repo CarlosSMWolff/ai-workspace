@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI-Assisted Research Workbench</title>
+  <link rel="stylesheet" href="/dashboard/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script defer src="/dashboard/live.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside id="file-panel" class="file-panel" aria-label="File browser">
+      <header class="panel-header">
+        <div>
+          <h1>Research Workbench</h1>
+          <p>Markdown files</p>
+        </div>
+        <button id="hide-panel" class="ghost-button" type="button">Hide</button>
+      </header>
+
+      <nav id="file-tree" class="file-tree" aria-label="Markdown file tree">
+        <p class="loading-state">Loading files...</p>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-file">
+          <button id="show-panel" class="ghost-button" type="button">Files</button>
+          <div class="file-title-block">
+            <strong id="current-file-title">No file loaded</strong>
+            <span id="current-file">Waiting for Markdown source</span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <form id="open-path-form" class="path-form">
+            <input id="file-input" type="text" placeholder="investigations/inv-001-example.md" aria-label="Markdown path">
+            <button type="submit">Open</button>
+          </form>
+          <label class="refresh-toggle">
+            <input id="auto-refresh" type="checkbox" checked>
+            <span>Auto</span>
+          </label>
+          <span id="last-loaded" class="load-status">Not loaded yet</span>
+        </div>
+      </header>
+
+      <article id="content" class="content">
+        <h1>AI-Assisted Research Workbench</h1>
+        <p>Select a Markdown file from the file browser.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

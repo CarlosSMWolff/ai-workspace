@@ -1,0 +1,49 @@
+{
+  "_comment": "Paths are prefixes, relative to the repo root. A tool call editing a file under ai/ is allowed if the file starts with one of always_allowed or one of phases[<current phase>]. A tool call editing a file OUTSIDE ai/ (i.e. real project code, not always_allowed) is allowed only when the current phase is 'deployment'. In-progress code belongs in ai/code_dev/ instead, gated by the 'development' phase like any other ai/ path.",
+  "always_allowed": [
+    "ai/state/",
+    "ai/sessions/",
+    "ai/simulations/",
+    "ai/open-questions.md",
+    "CLAUDE.md",
+    ".claude/"
+  ],
+  "phases": {
+    "intake": [
+      "ai/project.md",
+      "ai/glossary.md",
+      "ai/conventions.md",
+      "ai/index.md"
+    ],
+    "session": [
+      "ai/investigations/"
+    ],
+    "literature": [
+      "ai/literature/",
+      "ai/project.md",
+      "ai/investigations/"
+    ],
+    "theory": [
+      "ai/investigations/",
+      "ai/glossary.md",
+      "ai/conventions.md"
+    ],
+    "criticism": [
+      "ai/investigations/",
+      "ai/conventions.md"
+    ],
+    "development": [
+      "ai/code_dev/",
+      "ai/investigations/"
+    ],
+    "deployment": [
+      "ai/investigations/"
+    ],
+    "presentation": [
+      "ai/dashboard/",
+      "ai/scripts/serve.py",
+      "ai/scripts/start-server.sh",
+      "ai/scripts/start-server.ps1"
+    ]
+  }
+}

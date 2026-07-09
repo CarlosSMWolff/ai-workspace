@@ -1,0 +1,14 @@
+{
+  "title": "AI-Assisted Research Workbench",
+  "home": "index.md",
+  "refresh_seconds": 3,
+  "sections": [
+    { "label": "Home", "path": "index.md" },
+    { "label": "Project brief", "path": "project.md" },
+    { "label": "Open questions", "path": "open-questions.md" },
+    { "label": "Sessions", "path": "sessions/index.md" },
+    { "label": "Investigations", "path": "investigations/index.md" },
+    { "label": "Literature", "path": "literature/index.md" },
+    { "label": "Simulations", "path": "simulations/index.md" }
+  ]
+}
