@@ -46,10 +46,10 @@ to work around a denial; switch phase with `/phase` instead, or explain to the
 user why the current phase should be reconsidered.
 
 Files always editable regardless of phase: `ai/state/`, `ai/sessions/`,
-`ai/simulations/`, `ai/open-questions.md`, `CLAUDE.md`, `.claude/`. Files
-outside `ai/` (deployed project code under `code/`) are only editable in
-`deployment` phase — see `ai/state/phase-rules.json` for the exact enforced
-prefixes.
+`ai/simulations/`, `ai/open-questions.md`, `CLAUDE.md`, `ai/CLAUDE.md`,
+`.claude/`, `.gitignore`. Files outside `ai/` (deployed project code under
+`code/`) are only editable in `deployment` phase — see
+`ai/state/phase-rules.json` for the exact enforced prefixes.
 
 Default phase for a new project: `intake`. Do not infer phase transitions from
 conversation; only `/phase` changes them.

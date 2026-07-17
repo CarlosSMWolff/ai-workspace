@@ -6,7 +6,9 @@
     "ai/simulations/",
     "ai/open-questions.md",
     "CLAUDE.md",
-    ".claude/"
+    "ai/CLAUDE.md",
+    ".claude/",
+    ".gitignore"
   ],
   "phases": {
     "intake": [

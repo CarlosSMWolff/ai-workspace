@@ -1,0 +1,74 @@
+{
+  "name": "claude-sandbox",
+
+  // The starting "image": Ubuntu with Python already installed.
+  // If you need other system tools, we add them later.
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+
+  // A "feature" is a reusable install package that Anthropic maintains.
+  // This line installs Claude Code inside the container automatically.
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+
+  // This is where your repo will live INSIDE the container.
+  "workspaceFolder": "/workspace",
+
+  // This is the ONLY entry point to your Mac's disk:
+  // "localWorkspaceFolder" is the folder you run run_claude.sh from.
+  // Nothing else on your Mac is visible from inside.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+
+  // A volume (NOT a folder on your Mac) where Claude's login is stored,
+  // so you do not have to log in every time. This is storage owned by Docker itself.
+  "mounts": [
+    "source=claude-code-auth,target=/home/vscode/.claude,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+
+  // The container runs as a normal user, not as root.
+  "remoteUser": "vscode",
+
+  // NET_ADMIN/NET_RAW are Linux capabilities the container needs in order
+  // to be allowed to set up its OWN firewall rules (see init-firewall.sh).
+  // This does not give it any access to your Mac's network settings,
+  // only to its own internal network rules.
+  "capAdd": ["NET_ADMIN", "NET_RAW"],
+
+  // Runs ONCE, the first time the container is created:
+  // - installs the tools the firewall script needs (iptables, ipset, dig)
+  // - fixes ownership of the auth volume, which Docker creates as root
+  //   by default, so the non-root "vscode" user can actually write
+  //   Claude's login session into it (otherwise login silently fails
+  //   to persist and you get asked to log in again every time).
+  // NOTE: "apt-get update || true" ignores failures from third-party repos
+  // we do not need (the claude-code feature adds a yarnpkg repo with an
+  // expired signing key; we only need packages from the normal Debian repos,
+  // which still load fine even when that one fails).
+  "postCreateCommand": "sudo apt-get update || true && sudo apt-get install -y iptables ipset dnsutils && sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
+
+  // Runs EVERY time the container starts (including reusing an existing one):
+  // re-applies the firewall rules, since they do not automatically persist.
+  "postStartCommand": "sudo bash .devcontainer/init-firewall.sh",
+
+  // Resource limits: no matter what goes wrong inside,
+  // it cannot use more than this.
+  // NOTE: these numbers must be LOWER than what you assigned
+  // to the Docker Desktop VM in Settings > Resources.
+  // Values set for the Mac Studio (80GB/28 CPUs assigned to the VM).
+  // If you use this same file on the MacBook, lower this to something like
+  // "--memory=32g" and "--cpus=8".
+  // (run_claude.sh reads these values automatically, no need to
+  // change them in a second place too.)
+  "runArgs": [
+    "--memory=64g",
+    "--cpus=24",
+    // Gives the container a readable, fixed name instead of Docker's random
+    // two-word name (e.g. "friendly_hoover"). "${localWorkspaceFolderBasename}"
+    // is automatically replaced with the name of your repo's folder,
+    // so each repo gets its own clearly labeled container in "docker ps".
+    "--name=claude-sandbox-${localWorkspaceFolderBasename}"
+  ]
+}
