@@ -3,12 +3,18 @@
 
 Reads the current phase from ai/state/phase.txt and the allowed-path rules
 from ai/state/phase-rules.json, and denies tool calls that would edit a file
-outside what the current phase permits. Files inside ai/ are checked against
-the phase's allowlist; files outside ai/ (i.e. deployed project code under
-code/) are only editable during the 'deployment' phase — in-progress code
-belongs in ai/code_dev/ instead, promoted to code/ via /deploy-code. Fails
-open (allows the edit) if the rules/state files are missing or malformed, so a
-corrupted state file can never brick the repo.
+outside what the current phase permits.
+
+Check order:
+  1. always_allowed prefixes → allow unconditionally.
+  2. Current phase's allowlist prefixes → allow (works for any path, inside or
+     outside ai/, so phases like ai-config can whitelist .claude/ or CLAUDE.md).
+  3. Path starts with ai/ → deny with a phase-specific message.
+  4. Path is outside ai/ → allow only in 'deployment' phase (for code/), deny
+     otherwise.
+
+Fails open (allows the edit) if the rules/state files are missing or malformed,
+so a corrupted state file can never brick the repo.
 """
 import json
 import os
@@ -59,29 +65,38 @@ def main():
     except OSError:
         phase = "intake"
 
+    # 1. Always-allowed paths (state files, session logs, etc.)
     always_allowed = rules.get("always_allowed", [])
     if any(rel_path.startswith(p) for p in always_allowed):
         return
 
+    # 2. Current phase's explicit allowlist — checked for ALL paths, not just
+    #    ai/ ones, so that ai-config can whitelist .claude/ or CLAUDE.md.
+    phase_allowed = rules.get("phases", {}).get(phase, [])
+    if any(rel_path.startswith(p) for p in phase_allowed):
+        return
+
+    # 3. File is inside ai/ but not allowed by this phase.
     if rel_path.startswith("ai/"):
-        allowed = rules.get("phases", {}).get(phase, [])
-        if any(rel_path.startswith(p) for p in allowed):
-            return
+        ai_allowed = [p for p in phase_allowed if p.startswith("ai/")]
         deny(
             f"Phase '{phase}' does not allow editing '{rel_path}'. "
-            f"Allowed ai/ paths in this phase: {allowed or '(none)'}. "
+            f"Allowed ai/ paths in this phase: {ai_allowed or '(none)'}. "
             f"Switch phase with /phase <name>."
         )
-    else:
-        if phase == "deployment":
-            return
-        deny(
-            f"Editing project code ('{rel_path}') requires DEPLOYMENT phase "
-            f"(current phase: '{phase}'). In-progress code belongs in "
-            f"ai/code_dev/ instead (writable in 'development' phase); promote "
-            f"it to code/ with /deploy-code once ready. Switch with "
-            f"/phase deployment."
-        )
+
+    # 4. File is outside ai/ (project code or repo-root config).
+    #    'deployment' phase allows everything under code/; 'ai-config' handles
+    #    .claude/ and CLAUDE.md via the allowlist above (already returned if
+    #    matched). Anything else is blocked.
+    if phase == "deployment":
+        return
+    deny(
+        f"Editing '{rel_path}' (outside ai/) is not allowed in phase '{phase}'. "
+        f"For deployed project code (code/) switch to 'deployment' phase; "
+        f"for AI behaviour files (.claude/, CLAUDE.md) switch to 'ai-config' phase. "
+        f"Switch with /phase <name>."
+    )
 
 
 if __name__ == "__main__":

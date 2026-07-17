@@ -1,1 +1,1 @@
-intake
+ai-config

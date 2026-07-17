@@ -8,6 +8,10 @@ lives under `ai/`, so a real project built from it stays clean:
 your-project/            (a real git repo)
 ├── CLAUDE.md              # one line: @ai/CLAUDE.md
 ├── .claude/                # hidden: commands, the phase hook, settings
+├── .devcontainer/          # optional: sandboxed container config
+│   ├── devcontainer.json   #   resource limits, mounts, firewall hook
+│   └── init-firewall.sh    #   network allowlist applied on every start
+├── run_claude.sh           # optional: launch Claude inside the container
 ├── code/                   # deployed/tested project code — no imposed layout
 └── ai/                     # everything in this scaffold
     ├── CLAUDE.md
@@ -17,7 +21,7 @@ your-project/            (a real git repo)
     ├── investigations/
     ├── literature/
     ├── simulations/         (a registry, not code)
-    ├── code_dev/            # in-progress code — no imposed layout
+    ├── code_dev/            # full runnable copy of code/ — edit here in development phase
     ├── dashboard/
     └── scripts/
 ```
@@ -34,6 +38,81 @@ It combines two ideas:
   hard wall between in-progress code (`ai/code_dev/`, writable only in
   `development` phase) and deployed code (`code/`, writable only in
   `deployment` phase).
+
+---
+
+## Sandboxed container mode (optional)
+
+By default you run `claude` directly on your machine. The `.devcontainer/` +
+`run_claude.sh` pair give you a contained alternative: Claude runs inside a
+Docker container whose file-system access is limited to this repo folder, and
+whose network access is restricted to a small explicit allowlist by a
+default-deny firewall.
+
+### Prerequisites
+
+- **Docker Desktop** running (the script checks and aborts if it isn't).
+- **Node.js / npx** installed on the host (used to drive the devcontainer CLI;
+  typically already present if you have Node installed).
+
+### Usage
+
+```bash
+./run_claude.sh
+```
+
+The script:
+1. Reads resource limits (`--memory`, `--cpus`) directly from
+   `devcontainer.json` so there is no second place to keep them in sync.
+2. Prints the Docker VM's available RAM/CPU alongside what the container will
+   request, and warns if the numbers exceed what the VM has.
+3. Asks for explicit confirmation before launching anything.
+4. Starts (or reuses) the container with `@devcontainers/cli`, then drops you
+   into `claude --dangerously-skip-permissions` inside it.
+
+`--dangerously-skip-permissions` is reasonable here because the container
+limits file access to `/workspace` (this repo's folder, bind-mounted from your
+machine) and nothing else on your disk is reachable. This removes the
+per-tool approval prompts that would otherwise fire constantly inside the
+container — the container provides the outer boundary, not Claude's permission
+system.
+
+### Network firewall
+
+`init-firewall.sh` runs every time the container starts and installs a
+default-deny `iptables` ruleset. Outbound HTTPS/HTTP is allowed only to an
+explicit allowlist (edit the `ALLOWED_DOMAINS` array to change it):
+
+| Domain group | Purpose |
+|---|---|
+| `pypi.org`, `files.pythonhosted.org` | Python packages |
+| `github.com`, `api.github.com`, `raw.githubusercontent.com`, … | Cloning repos, releases |
+| `arxiv.org`, `export.arxiv.org` | Papers |
+| `api.anthropic.com`, `console.anthropic.com`, `claude.ai` | Claude Code itself |
+
+DNS lookups and loopback are always allowed; everything else is dropped.
+
+**Limitation:** the firewall is applied at container startup, before Claude
+launches. It blocks accidental or incidental outbound traffic effectively.
+However, the container user has passwordless `sudo` (required to run
+`iptables` during setup), which means a sufficiently determined agent could
+bypass the rules at runtime via direct `iptables` commands. The firewall is a
+meaningful guardrail against unintended network access, not a cryptographic
+hard boundary.
+
+### Resource limits
+
+`devcontainer.json` contains `"--memory=64g"` and `"--cpus=24"` under
+`runArgs`, sized for a Mac Studio with 80 GB / 28 CPUs assigned to the Docker
+VM. **If you use this on a different machine, lower those numbers** before the
+first run — the script will warn you if the requested limits exceed the VM's
+capacity, but it won't refuse to start.
+
+### Auth persistence
+
+Claude's login session is stored in a named Docker volume (`claude-code-auth`),
+not in your repo folder, so you only need to authenticate once per machine
+even as you create new containers.
 
 ---
 
@@ -69,11 +148,14 @@ The straightforward way:
 git clone https://github.com/you/ai-workspace.git /tmp/ai-workspace-scratch
 rm -rf /tmp/ai-workspace-scratch/.git
 
-# Copy the three pieces into your existing repo's root.
+# Copy the scaffold pieces into your existing repo's root.
 cp -r /tmp/ai-workspace-scratch/ai ./ai
 cp /tmp/ai-workspace-scratch/CLAUDE.md ./CLAUDE.md
 cp -r /tmp/ai-workspace-scratch/.claude ./.claude
-chmod +x ai/scripts/*.sh ai/scripts/*.py .claude/hooks/*.py
+# Optional: sandboxed container support
+cp -r /tmp/ai-workspace-scratch/.devcontainer ./.devcontainer
+cp /tmp/ai-workspace-scratch/run_claude.sh ./run_claude.sh
+chmod +x ai/scripts/*.sh ai/scripts/*.py .claude/hooks/*.py run_claude.sh
 
 # Commit as part of your existing repo's own history.
 git add CLAUDE.md .claude ai
@@ -137,17 +219,19 @@ the change is enforced by a hook (see below), not just remembered by the model.
 
 | Phase | Goal | What it unlocks |
 |---|---|---|
+| `ai-config` (**hard-locked**) | Edit AI behaviour files | `.claude/`, `CLAUDE.md`, `ai/CLAUDE.md`, `ai/README.md`, phase scripts |
 | `intake` (default) | Frame the project before doing anything else | `project.md`, `glossary.md`, `conventions.md`, `index.md` |
 | `session` | Record day-by-day exploration | `investigations/` (for linking/updating while logging) |
 | `literature` | Build source-grounded topic notes | `literature/` |
 | `theory` | Develop distilled analytical results | `investigations/` |
 | `criticism` | Attack the current theory/literature synthesis | `investigations/` |
-| `development` | Write/iterate in-progress code | `ai/code_dev/`, `investigations/` |
+| `development` | Write/iterate code (full copy of `code/`) | `ai/code_dev/`, `investigations/` |
 | `deployment` | Promote tested code to the real repo | **`code/` (repo root, outside `ai/`)**, `investigations/` |
 | `presentation` | Polish the live dashboard | `dashboard/`, the serve scripts |
 
-`ai/state/`, `ai/sessions/`, `ai/simulations/`, `ai/open-questions.md`,
-`CLAUDE.md`, and `.claude/` are always editable, in any phase.
+`ai/state/`, `ai/sessions/`, `ai/simulations/`, and `ai/open-questions.md`
+are always editable, in any phase. AI behaviour files (`.claude/`, `CLAUDE.md`,
+`ai/CLAUDE.md`, `ai/README.md`) require `ai-config` phase.
 
 **The important one:** anything outside `ai/` — i.e. your real deployed code in
 `code/` — can only be edited during `deployment` phase. New development
@@ -157,17 +241,23 @@ let the agent touch shipped code before it's actually ready."
 
 ## The code_dev → code pipeline
 
-- `ai/code_dev/` — in-progress, experimental code. No imposed structure.
-  Writable only in `development` phase.
+- `ai/code_dev/` — a **full runnable copy of `code/`**, writable only in
+  `development` phase. On entering development phase, sync from `code/` first
+  if `code_dev/` is stale or empty:
+  ```bash
+  rsync -a code/ ai/code_dev/
+  ```
+  All edits happen here. `code_dev/` must remain fully runnable throughout —
+  it is the working copy, not a patch on top of `code/`.
 - `code/` (repo root) — deployed/tested code, whatever layout the project
   needs (`src/`, `notebooks/`, `README.md`, `results/`, ...). Writable only in
   `deployment` phase.
-- `/deploy-code` — promotes `ai/code_dev/` into `code/` via `ai/scripts/deploy-code.sh`,
-  an **additive merge** (`rsync -a` without `--delete`): files/folders present in
-  `code_dev/` are copied over, but nothing already in `code/` that `code_dev/`
-  doesn't have (a `LICENSE`, a CI config, packaging files) is ever deleted. It
-  stops after copying — review `git status`/`git diff` yourself before
-  committing.
+- `/deploy-code` — promotes changes from `ai/code_dev/` into `code/` via
+  `ai/scripts/deploy-code.sh`, an **additive merge** (`rsync -a` without
+  `--delete`): files present in `code_dev/` are copied over, but files that
+  exist only in `code/` (a `LICENSE`, CI config, packaging files the
+  experiment doesn't touch) are never deleted. Review `git status`/`git diff`
+  yourself before committing.
 
 ## How the enforcement actually works
 

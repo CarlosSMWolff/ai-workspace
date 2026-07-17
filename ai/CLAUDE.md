@@ -16,8 +16,9 @@ Four wiki layers, plus two code areas. Do not confuse them.
 - `simulations/` — a lightweight registry linking numerical experiments to
   investigations. It does not hold code itself, just an index row per
   experiment pointing at where the code actually lives.
-- `code_dev/` (inside `ai/`) — in-progress, experimental code. No imposed
-  internal structure.
+- `code_dev/` (inside `ai/`) — a full runnable copy of `code/`. Sync from
+  `code/` on entering development phase (`rsync -a code/ ai/code_dev/`), then
+  edit here. Must remain fully runnable throughout — not a partial diff.
 - `code/` (repo root, sibling of `ai/`) — deployed/tested code, promoted from
   `code_dev/` via `/deploy-code`. No imposed internal structure.
 
@@ -33,9 +34,10 @@ Four wiki layers, plus two code areas. Do not confuse them.
   don't invent extra grading fields.
 
 ## Phases — enforced, not just prompted
-Switch phases with `/phase <name>`: `intake`, `session`, `literature`, `theory`,
-`criticism`, `development`, `deployment`, `presentation`. This runs
-`ai/scripts/set-phase.sh`, which writes `ai/state/phase.txt`.
+Switch phases with `/phase <name>`: `ai-config`, `intake`, `session`,
+`literature`, `theory`, `criticism`, `development`, `deployment`,
+`presentation`. This runs `ai/scripts/set-phase.sh`, which writes
+`ai/state/phase.txt`.
 
 A `PreToolUse` hook (`.claude/hooks/phase_guard.py`) reads that file plus
 `ai/state/phase-rules.json` and **denies** Edit/Write/NotebookEdit calls to
@@ -46,9 +48,10 @@ to work around a denial; switch phase with `/phase` instead, or explain to the
 user why the current phase should be reconsidered.
 
 Files always editable regardless of phase: `ai/state/`, `ai/sessions/`,
-`ai/simulations/`, `ai/open-questions.md`, `CLAUDE.md`, `ai/CLAUDE.md`,
-`.claude/`, `.gitignore`. Files outside `ai/` (deployed project code under
-`code/`) are only editable in `deployment` phase — see
+`ai/simulations/`, `ai/open-questions.md`, `.gitignore`. Files outside `ai/`
+(deployed project code under `code/`) are only editable in `deployment` phase;
+AI behaviour files (`.claude/`, `CLAUDE.md`, `ai/CLAUDE.md`, `ai/README.md`,
+phase scripts) are only editable in `ai-config` phase — see
 `ai/state/phase-rules.json` for the exact enforced prefixes.
 
 Default phase for a new project: `intake`. Do not infer phase transitions from
@@ -56,6 +59,11 @@ conversation; only `/phase` changes them.
 
 Summary of intent per phase:
 
+- **ai-config** — edit AI behaviour files: `.claude/`, `CLAUDE.md`,
+  `ai/CLAUDE.md`, `ai/README.md`, and the phase scripts. **Hard-locked:**
+  `set-phase.sh` requires `--confirmed` to enter this phase, and the `/phase`
+  command must ask the user for explicit confirmation before passing it. Switch
+  back to any other phase normally when done.
 - **intake** — understand the project before literature, theory, or code. Ask
   the user compact framing questions (physical system, central question, goal
   type, known model/equations/data, assumptions, audience, rigor, whether
@@ -76,10 +84,13 @@ Summary of intent per phase:
   finite-size or boundary artifacts, numerical artifacts, overclaimed
   literature support. Output: strongest objections, what would falsify the
   claim, minimal diagnostic to check next.
-- **development** — the only phase where `ai/code_dev/` may be touched. This
-  is where new/experimental code gets written and iterated on. Fixed seeds,
-  reproducible scripts. Register numerical experiments in
-  `ai/simulations/index.md` as you go.
+- **development** — the only phase where `ai/code_dev/` may be touched.
+  `code_dev/` is a full runnable copy of `code/` — before making any edits,
+  check whether it is up to date and sync if needed:
+  `rsync -a code/ ai/code_dev/`. Edit only in `code_dev/`; keep it fully
+  runnable at all times (not just the files touched). Fixed seeds, reproducible
+  scripts. Register numerical experiments in `ai/simulations/index.md` as you
+  go.
 - **deployment** — the only phase where the repo-root `code/` may be touched.
   Normally reached via `/deploy-code`, which promotes `ai/code_dev/` into
   `code/` (additive merge — never deletes anything `code/` has that
@@ -112,9 +123,10 @@ no per-experiment folder template — the code's location and structure is
 whatever `code_dev/`/`code/` already look like.
 
 ### Code
-`ai/code_dev/` (development phase) and `code/` (deployment phase) hold
-whatever the project actually needs — no scaffold-imposed layout. Use
-`/deploy-code` to promote `code_dev/` into `code/`.
+`ai/code_dev/` is a full runnable copy of `code/`. Sync it from `code/` on
+entering development phase, edit there, then promote back with `/deploy-code`.
+`code/` (deployment phase) is the deployed/tested version. No scaffold-imposed
+layout in either area.
 
 ## Index maintenance
 When creating or substantially updating a file, update its index: sessions ->

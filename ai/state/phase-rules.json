@@ -1,16 +1,21 @@
 {
-  "_comment": "Paths are prefixes, relative to the repo root. A tool call editing a file under ai/ is allowed if the file starts with one of always_allowed or one of phases[<current phase>]. A tool call editing a file OUTSIDE ai/ (i.e. real project code, not always_allowed) is allowed only when the current phase is 'deployment'. In-progress code belongs in ai/code_dev/ instead, gated by the 'development' phase like any other ai/ path.",
+  "_comment": "Paths are prefixes, relative to the repo root. A tool call editing a file under ai/ is allowed if the file starts with one of always_allowed or one of phases[<current phase>]. A tool call editing a file OUTSIDE ai/ (i.e. real project code, not always_allowed) is allowed only when the current phase is 'deployment'. In-progress code belongs in ai/code_dev/ instead, gated by the 'development' phase like any other ai/ path. The 'ai-config' phase is hard-locked: set-phase.sh requires --confirmed to enter it, and the /phase command requires explicit user confirmation before passing that flag.",
   "always_allowed": [
     "ai/state/",
     "ai/sessions/",
     "ai/simulations/",
     "ai/open-questions.md",
-    "CLAUDE.md",
-    "ai/CLAUDE.md",
-    ".claude/",
     ".gitignore"
   ],
   "phases": {
+    "ai-config": [
+      "ai/README.md",
+      "ai/CLAUDE.md",
+      "CLAUDE.md",
+      ".claude/",
+      "ai/scripts/set-phase.sh",
+      "ai/scripts/deploy-code.sh"
+    ],
     "intake": [
       "ai/project.md",
       "ai/glossary.md",
