@@ -8,7 +8,9 @@
   // A "feature" is a reusable install package that Anthropic maintains.
   // This line installs Claude Code inside the container automatically.
   "features": {
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {
+      "version": "latest"
+    }
   },
 
   // This is where your repo will live INSIDE the container.
@@ -47,7 +49,13 @@
   // we do not need (the claude-code feature adds a yarnpkg repo with an
   // expired signing key; we only need packages from the normal Debian repos,
   // which still load fine even when that one fails).
-  "postCreateCommand": "sudo apt-get update || true && sudo apt-get install -y iptables ipset dnsutils && sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
+  // The final step force-updates Claude Code to the latest published version:
+  // the devcontainer feature above installs whatever version was current when
+  // the image layer was first built and cached, so it can go stale across
+  // rebuilds. Running npm here guarantees a fresh CLI on every container
+  // creation. Pin to a specific version (e.g. @2.1.283) instead of @latest
+  // if you need reproducibility.
+  "postCreateCommand": "sudo apt-get update || true && sudo apt-get install -y iptables ipset dnsutils && sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude && sudo npm install -g @anthropic-ai/claude-code@latest",
 
   // Runs EVERY time the container starts (including reusing an existing one):
   // re-applies the firewall rules, since they do not automatically persist.
@@ -63,8 +71,8 @@
   // (run_claude.sh reads these values automatically, no need to
   // change them in a second place too.)
   "runArgs": [
-    "--memory=64g",
-    "--cpus=24",
+    "--memory=31g",
+    "--cpus=16",
     // Gives the container a readable, fixed name instead of Docker's random
     // two-word name (e.g. "friendly_hoover"). "${localWorkspaceFolderBasename}"
     // is automatically replaced with the name of your repo's folder,
