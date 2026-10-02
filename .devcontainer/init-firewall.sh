@@ -52,6 +52,16 @@ ALLOWED_DOMAINS=(
   "api.anthropic.com"
   "console.anthropic.com"
   "claude.ai"
+  "patents.google.com"
+  "patentimages.storage.googleapis.com"
+  "worldwide.espacenet.com"
+  "ops.epo.org"
+  "patentscope.wipo.int"
+  "ppubs.uspto.gov"
+  "image-ppubs.uspto.gov"
+  "patents-justia.com"
+  "www.freepatentsonline.com"
+  "www.lens.org"
 )
 
 # ipset is a tool that lets iptables match against a whole GROUP of IP
